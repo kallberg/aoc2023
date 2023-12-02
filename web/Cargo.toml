@@ -5,7 +5,7 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
+[target.'cfg(target_arch = "wasm32")'.dependencies]
 gloo-utils = "0.2.0"
 gloo-events = "0.2.0"
 gloo-console = "0.3.0"
@@ -14,6 +14,6 @@ wasm-bindgen-futures = "0.4.39"
 futures = "0.3.29"
 solutions = { path = "../solutions" }
 
-[dependencies.web-sys]
+[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
 version = "0.3.66"
 features = ["Window", "Element", "HtmlDivElement", "HtmlButtonElement", "HtmlTextAreaElement"]

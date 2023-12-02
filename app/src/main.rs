@@ -19,9 +19,9 @@ fn print_day(day: Box<dyn Solver>, index: usize) {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
-    let solver = solvers::Solvers::get(1, input::ONE).unwrap();
+    let solver = solvers::Solvers::get(2, input::TWO).unwrap();
 
-    print_day(solver, 1);
+    print_day(solver, 2);
 }
 
 #[cfg(target_arch = "wasm32")]

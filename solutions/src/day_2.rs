@@ -1,58 +1,74 @@
 use crate::Solver;
+use anyhow::{Error, Result};
+use thiserror::Error;
 
 type GameSet = (u32, u32, u32);
 
+#[derive(Default)]
 pub struct Day {
+    input: String,
     rgb_game_max: Vec<(u32, u32, u32)>,
 }
 
-impl Day {
-    fn parse_game_set(value: &str) -> GameSet {
-        let (amount_str, color) = value.split_once(" ").unwrap();
+#[derive(Error, Debug)]
+pub enum DayError {
+    #[error("split game set by whitespace delimiter")]
+    GameSetDelimiter,
+    #[error("parse game set integer string {0}")]
+    GameSetInteger(String),
+    #[error("map game set color {0}")]
+    GameSetColor(String),
+}
 
-        let amount: u32 = amount_str.parse().unwrap();
+impl Day {
+    fn parse_game_set(value: &str) -> Result<GameSet> {
+        let (amount_str, color) = value.split_once(" ").ok_or(DayError::GameSetDelimiter)?;
+
+        let amount: u32 = amount_str
+            .parse()
+            .map_err(|_err| DayError::GameSetInteger(amount_str.to_string()))?;
 
         match color {
-            "blue" => (0, 0, amount),
-            "red" => (amount, 0, 0),
-            "green" => (0, amount, 0),
-            _ => unreachable!(),
+            "blue" => Ok((0, 0, amount)),
+            "red" => Ok((amount, 0, 0)),
+            "green" => Ok((0, amount, 0)),
+            _ => Err(Error::from(DayError::GameSetColor(color.to_string()))),
         }
     }
 
-    fn line_game_set(set: &str) -> Vec<GameSet> {
+    fn line_game_set(set: &str) -> Result<Vec<GameSet>> {
         let mut reveals = vec![];
         let cubes = set.split(",");
 
         for cube in cubes {
-            reveals.push(Day::parse_game_set(cube.trim()));
+            reveals.push(Day::parse_game_set(cube.trim())?);
         }
 
-        reveals
+        Ok(reveals)
     }
-    fn line_reveals(line: &str) -> Vec<GameSet> {
+    fn line_reveals(line: &str) -> Result<Vec<GameSet>> {
         let line = line.split_once(":").unwrap().1;
         let sets = line.split(";");
 
         let mut game_sets = vec![];
 
         for set in sets {
-            game_sets.append(&mut Day::line_game_set(set))
+            game_sets.append(&mut Day::line_game_set(set)?)
         }
 
-        game_sets
+        Ok(game_sets)
     }
 
-    fn games(input: &str) -> Vec<Vec<GameSet>> {
+    fn games(input: &str) -> Result<Vec<Vec<GameSet>>> {
         let mut lines_reveals = vec![];
 
         for line in input.lines() {
-            let line_reveals = Day::line_reveals(line);
+            let line_reveals = Day::line_reveals(line)?;
 
             lines_reveals.push(line_reveals);
         }
 
-        lines_reveals
+        Ok(lines_reveals)
     }
 
     fn game_max_rgb(line: Vec<GameSet>) -> (u32, u32, u32) {
@@ -62,21 +78,21 @@ impl Day {
     }
 }
 
-impl From<&str> for Day {
-    fn from(value: &str) -> Self {
-        let games = Day::games(value);
+impl Solver for Day {
+    fn setup(&mut self, input: &str) {
+        self.input = input.to_string();
+    }
 
-        let mut rgb_game_max = vec![];
+    fn parse(&mut self) -> Result<()> {
+        let games = Day::games(&self.input)?;
 
         for game in games.into_iter() {
-            rgb_game_max.push(Day::game_max_rgb(game))
+            self.rgb_game_max.push(Day::game_max_rgb(game))
         }
 
-        Self { rgb_game_max }
+        Ok(())
     }
-}
 
-impl Solver for Day {
     fn part_1(&self) -> anyhow::Result<String> {
         let mut id_sum = 0;
 

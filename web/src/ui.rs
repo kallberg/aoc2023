@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use web_sys::wasm_bindgen::JsCast;
 use web_sys::{
     EventTarget, HtmlButtonElement, HtmlDivElement, HtmlOptionElement, HtmlOptionsCollection,
@@ -12,6 +13,8 @@ pub struct UIRef {
     solve: HtmlButtonElement,
     status: HtmlDivElement,
     day: HtmlSelectElement,
+    part_1_button: HtmlButtonElement,
+    part_2_button: HtmlButtonElement,
 }
 
 impl Default for UIRef {
@@ -52,6 +55,18 @@ impl Default for UIRef {
             .dyn_into::<HtmlSelectElement>()
             .unwrap();
 
+        let part_1_button = gloo_utils::document()
+            .get_element_by_id("part-1-button")
+            .unwrap()
+            .dyn_into::<HtmlButtonElement>()
+            .unwrap();
+
+        let part_2_button = gloo_utils::document()
+            .get_element_by_id("part-2-button")
+            .unwrap()
+            .dyn_into::<HtmlButtonElement>()
+            .unwrap();
+
         Self {
             input,
             part_1,
@@ -59,6 +74,8 @@ impl Default for UIRef {
             solve,
             status,
             day,
+            part_1_button,
+            part_2_button,
         }
     }
 }
@@ -70,6 +87,14 @@ impl UIRef {
 
     pub fn day_select_event_target(&self) -> &EventTarget {
         self.day.dyn_ref::<EventTarget>().unwrap()
+    }
+
+    pub fn part_1_button_event_target(&self) -> &EventTarget {
+        self.part_1_button.dyn_ref::<EventTarget>().unwrap()
+    }
+
+    pub fn part_2_button_event_target(&self) -> &EventTarget {
+        self.part_2_button.dyn_ref::<EventTarget>().unwrap()
     }
 
     pub fn day(&self) -> usize {
@@ -102,5 +127,22 @@ impl UIRef {
 
     pub fn set_status(&mut self, status: &str) {
         self.status.set_inner_text(status);
+    }
+
+    pub fn clear_outputs(&mut self) {
+        self.set_part_1("");
+        self.set_part_2("");
+    }
+
+    pub fn fail_status(&mut self, day: usize, expect: &str, error: impl Display) {
+        self.set_status(&format!("day {} expect {} error={}", day, expect, error))
+    }
+
+    pub fn part_1(&self) -> String {
+        self.part_1.inner_text()
+    }
+
+    pub fn part_2(&self) -> String {
+        self.part_2.inner_text()
     }
 }

@@ -2,6 +2,8 @@ use anyhow::{Error, Result};
 use thiserror::Error;
 
 use crate::Solver;
+
+#[derive(Default)]
 pub struct Day {
     input: String,
 }
@@ -28,7 +30,7 @@ impl Day {
         Ok(last + first * 10)
     }
 
-    fn find_both_extended(index: usize, line: &str, ) -> Result<u32> {
+    fn find_both_extended(index: usize, line: &str) -> Result<u32> {
         let first = Day::find_pattern(0..line.len(), line);
         let last = Day::find_pattern((0..line.len()).rev(), line);
 
@@ -61,14 +63,6 @@ impl Day {
     }
 }
 
-impl From<&str> for Day {
-    fn from(value: &str) -> Self {
-        Self {
-            input: value.into(),
-        }
-    }
-}
-
 #[derive(Error, Debug)]
 pub enum DayError {
     #[error("first digit not found at input line {0}")]
@@ -78,6 +72,14 @@ pub enum DayError {
 }
 
 impl Solver for Day {
+    fn setup(&mut self, input: &str) {
+        self.input = input.to_string();
+    }
+
+    fn parse(&mut self) -> Result<()> {
+        Ok(())
+    }
+
     fn part_1(&self) -> Result<String> {
         let input = &self.input;
 

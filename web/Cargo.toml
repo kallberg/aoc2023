@@ -24,4 +24,8 @@ features = [
     "HtmlSelectElement",
     "HtmlOptionElement",
     "HtmlOptionsCollection",
+    "Clipboard",
+    "Navigator",
 ]
+
+

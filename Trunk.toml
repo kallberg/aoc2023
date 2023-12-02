@@ -1,0 +1,6 @@
+[build]
+target = "app/index.html"
+dist = "public"
+
+[clean]
+dist = "public"

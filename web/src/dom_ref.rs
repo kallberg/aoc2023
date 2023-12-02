@@ -1,5 +1,5 @@
 use web_sys::wasm_bindgen::JsCast;
-use web_sys::{HtmlButtonElement, HtmlDivElement, HtmlTextAreaElement};
+use web_sys::{HtmlButtonElement, HtmlDivElement, HtmlSelectElement, HtmlTextAreaElement};
 
 pub struct DOMRef {
     pub input: HtmlTextAreaElement,
@@ -7,6 +7,7 @@ pub struct DOMRef {
     pub part_2: HtmlDivElement,
     pub solve: HtmlButtonElement,
     pub status: HtmlDivElement,
+    pub day: HtmlSelectElement,
 }
 
 impl Default for DOMRef {
@@ -29,7 +30,7 @@ impl Default for DOMRef {
             .dyn_into::<HtmlDivElement>()
             .unwrap();
 
-        let run = gloo_utils::document()
+        let solve = gloo_utils::document()
             .get_element_by_id("solve")
             .unwrap()
             .dyn_into::<HtmlButtonElement>()
@@ -41,13 +42,19 @@ impl Default for DOMRef {
             .dyn_into::<HtmlDivElement>()
             .unwrap();
 
+        let day = gloo_utils::document()
+            .get_element_by_id("day")
+            .unwrap()
+            .dyn_into::<HtmlSelectElement>()
+            .unwrap();
+
         Self {
             input,
             part_1,
             part_2,
-            solve: run,
+            solve,
             status,
+            day,
         }
     }
 }
-

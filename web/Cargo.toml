@@ -16,4 +16,13 @@ solutions = { path = "../solutions" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
 version = "0.3.66"
-features = ["Window", "Element", "HtmlDivElement", "HtmlButtonElement", "HtmlTextAreaElement"]
+features = [
+    "Window",
+    "Element",
+    "HtmlDivElement",
+    "HtmlButtonElement",
+    "HtmlTextAreaElement",
+    "HtmlSelectElement",
+    "HtmlOptionElement",
+    "HtmlOptionsCollection",
+]

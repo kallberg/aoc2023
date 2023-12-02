@@ -1,4 +1,3 @@
-
 #[cfg(target_arch = "wasm32")]
 mod dom_ref;
 
@@ -11,30 +10,32 @@ mod wasm {
     use std::pin::Pin;
     use std::task::{Context, Poll};
     use wasm_bindgen::{JsCast, UnwrapThrowExt};
-    use web_sys::EventTarget;
+    use web_sys::{EventTarget, HtmlOptionElement, HtmlOptionsCollection};
 
-    use solutions::input::ONE;
-    use solutions::solvers::Solvers;
     use crate::dom_ref;
+    use solutions::solvers::Solvers;
 
-    pub struct RunClickHandler {
+    pub struct EventStream {
         receiver: mpsc::UnboundedReceiver<()>,
         _listener: EventListener,
     }
 
-    impl RunClickHandler {
-        pub fn new(target: EventTarget) -> Self {
+    impl EventStream {
+        pub fn new(target: EventTarget, event_type: &str) -> Self {
             let (sender, receiver) = mpsc::unbounded();
 
-            let _listener = EventListener::new(&target, "click", move |_event| {
+            let _listener = EventListener::new(&target, event_type, move |_event| {
                 sender.unbounded_send(()).unwrap_throw()
             });
 
-            Self { receiver, _listener }
+            Self {
+                receiver,
+                _listener,
+            }
         }
     }
 
-    impl Stream for RunClickHandler {
+    impl Stream for EventStream {
         type Item = ();
 
         fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
@@ -44,16 +45,32 @@ mod wasm {
 
     pub async fn bind() {
         let dom_ref = DOMRef::default();
+        let day: usize = 1;
 
-        dom_ref.input.set_value(&ONE);
+        let options: HtmlOptionsCollection = dom_ref.day.options();
+        let index = dom_ref.day.selected_index();
 
-        let mut run_click_handler =
-            RunClickHandler::new(dom_ref.solve.dyn_ref::<EventTarget>().unwrap().clone());
+        let selection = options
+            .get_with_index(index as u32)
+            .unwrap()
+            .dyn_into::<HtmlOptionElement>()
+            .unwrap();
+
+        let day: usize = selection.value().parse().unwrap();
+
+        let input = solutions::input::get(day);
+
+        dom_ref.input.set_value(&input);
+
+        let mut run_click_handler = EventStream::new(
+            dom_ref.solve.dyn_ref::<EventTarget>().unwrap().clone(),
+            "click",
+        );
 
         while run_click_handler.next().await.is_some() {
             let input = dom_ref.input.value();
 
-            let Some(solver) = Solvers::get(1, &input) else {
+            let Some(solver) = Solvers::get(day, &input) else {
                 continue;
             };
 
@@ -62,7 +79,9 @@ mod wasm {
             let part_1 = match part_1_result {
                 Ok(result) => result,
                 Err(err) => {
-                    dom_ref.status.set_inner_text(&format!("day_1 error={}", err));
+                    dom_ref
+                        .status
+                        .set_inner_text(&format!("day_1 error={}", err));
                     continue;
                 }
             };
@@ -72,7 +91,9 @@ mod wasm {
             let part_2 = match part_2_result {
                 Ok(result) => result,
                 Err(err) => {
-                    dom_ref.status.set_inner_text(&format!("day_1 error={}", err));
+                    dom_ref
+                        .status
+                        .set_inner_text(&format!("day_1 error={}", err));
                     continue;
                 }
             };

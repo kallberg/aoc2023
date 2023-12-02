@@ -1,35 +1,78 @@
 use crate::Solver;
 
-pub enum Reveal {
-    Red(u32),
-    Green(u32),
-    Blue(u32),
+type GameSet = (u32, u32, u32);
+
+pub struct Day {
+    rgb_game_max: Vec<(u32, u32, u32)>,
 }
 
-impl From<&str> for Reveal {
-    fn from(value: &str) -> Self {
+impl Day {
+    fn parse_game_set(value: &str) -> GameSet {
         let (amount_str, color) = value.split_once(" ").unwrap();
 
         let amount: u32 = amount_str.parse().unwrap();
 
         match color {
-            "blue" => Reveal::Blue(amount),
-            "red" => Reveal::Red(amount),
-            "green" => Reveal::Green(amount),
+            "blue" => (0, 0, amount),
+            "red" => (amount, 0, 0),
+            "green" => (0, amount, 0),
             _ => unreachable!(),
         }
     }
-}
 
-pub struct Day {
-    input: String,
+    fn line_game_set(set: &str) -> Vec<GameSet> {
+        let mut reveals = vec![];
+        let cubes = set.split(",");
+
+        for cube in cubes {
+            reveals.push(Day::parse_game_set(cube.trim()));
+        }
+
+        reveals
+    }
+    fn line_reveals(line: &str) -> Vec<GameSet> {
+        let line = line.split_once(":").unwrap().1;
+        let sets = line.split(";");
+
+        let mut game_sets = vec![];
+
+        for set in sets {
+            game_sets.append(&mut Day::line_game_set(set))
+        }
+
+        game_sets
+    }
+
+    fn games(input: &str) -> Vec<Vec<GameSet>> {
+        let mut lines_reveals = vec![];
+
+        for line in input.lines() {
+            let line_reveals = Day::line_reveals(line);
+
+            lines_reveals.push(line_reveals);
+        }
+
+        lines_reveals
+    }
+
+    fn game_max_rgb(line: Vec<GameSet>) -> (u32, u32, u32) {
+        line.into_iter()
+            .reduce(|(ar, ag, ab), (r, g, b)| (ar.max(r), ag.max(g), ab.max(b)))
+            .unwrap_or((0, 0, 0))
+    }
 }
 
 impl From<&str> for Day {
     fn from(value: &str) -> Self {
-        Self {
-            input: value.to_string(),
+        let games = Day::games(value);
+
+        let mut rgb_game_max = vec![];
+
+        for game in games.into_iter() {
+            rgb_game_max.push(Day::game_max_rgb(game))
         }
+
+        Self { rgb_game_max }
     }
 }
 
@@ -37,49 +80,11 @@ impl Solver for Day {
     fn part_1(&self) -> anyhow::Result<String> {
         let mut id_sum = 0;
 
-        for (index, line) in self.input.lines().enumerate() {
+        for (index, (r, g, b)) in self.rgb_game_max.iter().enumerate() {
             let id = index + 1;
-            let line = line.split_once(":").unwrap().1;
-            let sets = line.split(";");
-
-            let mut red = 0;
-            let mut green = 0;
-            let mut blue = 0;
-
-            let mut max_red = 0;
-            let mut max_green = 0;
-            let mut max_blue = 0;
-
-            for s in sets {
-                let cubes = s.split(",");
-
-                for cube in cubes {
-                    let reveal = Reveal::from(cube.trim());
-                    match reveal {
-                        Reveal::Red(amount) => {
-                            red += amount;
-                            max_red = max_red.max(amount);
-                        }
-                        Reveal::Green(amount) => {
-                            green += amount;
-                            max_green = max_green.max(amount);
-                        }
-                        Reveal::Blue(amount) => {
-                            blue += amount;
-                            max_blue = max_blue.max(amount);
-                        }
-                    }
-                }
-            }
-
-            let power = max_red * max_green * max_blue;
-
-            if max_red > 12 || max_green > 13 || max_blue > 14 {
+            if *r > 12 || *g > 13 || *b > 14 {
                 continue;
             }
-
-            println!("{}", id);
-
             id_sum += id;
         }
 
@@ -89,34 +94,8 @@ impl Solver for Day {
     fn part_2(&self) -> anyhow::Result<String> {
         let mut power_sum = 0;
 
-        for line in self.input.lines() {
-            let line = line.split_once(":").unwrap().1;
-            let sets = line.split(";");
-
-            let mut max_red = 0;
-            let mut max_green = 0;
-            let mut max_blue = 0;
-
-            for s in sets {
-                let cubes = s.split(",");
-
-                for cube in cubes {
-                    let reveal = Reveal::from(cube.trim());
-                    match reveal {
-                        Reveal::Red(amount) => {
-                            max_red = max_red.max(amount);
-                        }
-                        Reveal::Green(amount) => {
-                            max_green = max_green.max(amount);
-                        }
-                        Reveal::Blue(amount) => {
-                            max_blue = max_blue.max(amount);
-                        }
-                    }
-                }
-            }
-
-            power_sum += max_red * max_green * max_blue;
+        for (r, g, b) in self.rgb_game_max.iter() {
+            power_sum += r * g * b;
         }
 
         Ok(power_sum.to_string())

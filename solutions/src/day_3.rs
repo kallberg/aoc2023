@@ -43,16 +43,11 @@ impl Solver for Day {
 
     fn parse(&mut self) -> anyhow::Result<()> {
         for (y, line) in self.input.lines().enumerate() {
-            let mut reading_part = false;
-            let mut part_chars: Vec<char> = vec![];
+            let mut reading_digits = false;
+            let mut part_value: u32 = 0;
 
             for (x, char) in line.chars().enumerate() {
-                if reading_part && !char.is_digit(10) {
-                    let part_string: String = part_chars.iter().collect();
-                    part_chars.clear();
-
-                    let part_value: u32 = part_string.parse()?;
-
+                if reading_digits && !char.is_digit(10) {
                     let width = (part_value.ilog10() + 1) as usize;
                     let part_x = x as u32 - width as u32;
 
@@ -64,16 +59,17 @@ impl Solver for Day {
                     };
 
                     self.part_numbers.push(part);
-                    reading_part = false;
+                    reading_digits = false;
+                    part_value = 0;
                 }
 
                 if char == '.' {
                     continue;
                 }
 
-                if char.is_digit(10) {
-                    reading_part = true;
-                    part_chars.push(char);
+                if let Some(digit) = char.to_digit(10) {
+                    part_value = part_value * 10 + digit;
+                    reading_digits = true;
                     continue;
                 }
 
@@ -84,10 +80,7 @@ impl Solver for Day {
                 self.symbols.push((x as u32, y as u32));
             }
 
-            if reading_part {
-                let part_string: String = part_chars.iter().collect();
-                let part_value: u32 = part_string.parse()?;
-
+            if reading_digits {
                 let width = (part_value.ilog10() + 1) as usize;
                 let part_x = (line.len() - 1) as u32 - width as u32;
 
@@ -134,6 +127,7 @@ impl Solver for Day {
                         None
                     }
                 })
+                .take(3)
                 .collect();
 
             if adjacent.len() == 2 {

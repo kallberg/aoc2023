@@ -1,12 +1,14 @@
+use crate::state::State;
 use std::fmt::Display;
 use web_sys::wasm_bindgen::JsCast;
 use web_sys::{
     EventTarget, HtmlButtonElement, HtmlDivElement, HtmlOptionElement, HtmlOptionsCollection,
-    HtmlSelectElement, HtmlTextAreaElement,
+    HtmlSelectElement, HtmlTextAreaElement, Location,
 };
 
 #[derive(Clone)]
 pub struct UIRef {
+    state: State,
     input: HtmlTextAreaElement,
     part_1: HtmlDivElement,
     part_2: HtmlDivElement,
@@ -17,8 +19,8 @@ pub struct UIRef {
     part_2_button: HtmlButtonElement,
 }
 
-impl Default for UIRef {
-    fn default() -> Self {
+impl UIRef {
+    pub fn new(state: State) -> Self {
         let input = gloo_utils::document()
             .get_element_by_id("input")
             .unwrap()
@@ -67,6 +69,8 @@ impl Default for UIRef {
             .dyn_into::<HtmlButtonElement>()
             .unwrap();
 
+        day.set_selected_index((state.day - 1) as i32);
+
         Self {
             input,
             part_1,
@@ -76,11 +80,9 @@ impl Default for UIRef {
             day,
             part_1_button,
             part_2_button,
+            state,
         }
     }
-}
-
-impl UIRef {
     pub fn solve_event_target(&self) -> EventTarget {
         self.solve.dyn_ref::<EventTarget>().unwrap().clone()
     }
@@ -107,6 +109,11 @@ impl UIRef {
             .unwrap();
 
         selection.value().parse().unwrap()
+    }
+
+    pub fn save_state(&mut self, location: &mut Location) {
+        self.state.day = self.day() as u8;
+        self.state.write_location(location);
     }
 
     pub fn set_input(&mut self, input: &str) {

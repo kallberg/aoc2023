@@ -5,14 +5,20 @@ mod ui;
 mod event;
 
 #[cfg(target_arch = "wasm32")]
+mod state;
+
+#[cfg(target_arch = "wasm32")]
 mod wasm {
     use ui::UIRef;
 
     use crate::event::EventProcessor;
+    use crate::state::State;
     use crate::ui;
 
     pub async fn bind() {
-        let mut ui_ref = UIRef::default();
+        let mut state = State::from_location(&gloo_utils::window().location()).unwrap_or_default();
+
+        let mut ui_ref = UIRef::new(state);
 
         let day: usize = ui_ref.day();
 

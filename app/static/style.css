@@ -3,33 +3,68 @@
     src: local("Source Code Pro"), url("SourceCodePro-Regular.ttf");
 }
 
+* {
+    box-sizing: border-box;
+}
+
+html {
+    --background: #24283b;
+    --foreground: #a9b1d6;
+    --text: #a9b1d6;
+    --terminal-black: #414868;
+    --terminal-yellow: #e0af68;
+    --aoc-green: #00cc00;
+    --aoc-green-shadow: 0 0 2px var(--aoc-green), 0 0 5px var(--aoc-green);
+    --aoc-star: #ffff66;
+    --aoc-star-shadow: 0 0 5px var(--aoc-star)
+}
+
 html, body {
     width: 100%;
     height: 100%;
     overflow: hidden;
     font-family: "Source Code Pro", monospace;
     font-size: 14pt;
-    background: #24283b;
-    color: #cccccc;
+    background: var(--background);
+    color: var(--text);
     box-sizing: border-box;
 }
 
 header {
-    color: #00cc00;
-    text-shadow: 0 0 2px #00cc00, 0 0 5px #00cc00;
+    color: var(--aoc-green);
+    text-shadow: var(--aoc-green-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: solid;
+    border-width: 1px;
+    border-color: var(--terminal-black);
+    justify-content: space-between;
+}
+
+footer {
+    padding-top: 10px;
+    display: flex;
+    border-top: solid;
+    border-width: 1px;
+    border-color: var(--terminal-black);
+    flex-direction: column;
 }
 
 body {
     display: flex;
     flex-direction: column;
     padding: 8px;
+    gap: 10px;
 }
 
 main {
-    margin: auto;
     display: flex;
     flex-direction: column;
     gap: 10px;
+    flex-grow: 1;
+    padding: 10px;
 }
 
 #input-container {
@@ -39,22 +74,28 @@ main {
 }
 
 #input {
-    background: #0f0f23;
+    background: var(--background);
     width: 768px;
     height: 512px;
-    color: #cccccc;
-    border-color: #333340;
+    color: var(--text);
+    border-color: var(--terminal-black);
     border-width: 2px;
-    border-style: solid;
     padding: 5px;
     resize: none;
-    text-wrap: none;
+    white-space: pre;
+    box-sizing: border-box;
+    border-style: solid;
+    font-family: "Source Code Pro", monospace;
+}
+
+#input:focus {
+    outline: none;
 }
 
 #part-1, #part-2 {
-    background: #0f0f23;
-    border-color: #333340;
-    height: 1em;
+    background: var(--background);
+    border-color: var(--terminal-black);
+    height: 40px;
     width: 128px;
     border-width: 2px;
     border-style: solid;
@@ -64,25 +105,47 @@ main {
     align-items: center;
     padding: 10px;
     font-size: 12pt;
-    color: #ffff66;
-    text-shadow: 0 0 5px #ffff66;
+    color: var(--aoc-star);
+    text-shadow: var(--aoc-star-shadow);
+    box-sizing: border-box;
+    font-family: "Source Code Pro", monospace;
 }
 
-header {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-select {
-    width: min-content;
+label {
+    font-family: "Source Code Pro", monospace;
 }
 
 #solve, #day, button {
-    height: 36px;
-    padding: 0 8px 0 8px;
-    border-color: #333340;
+    color: var(--text);
+    background: var(--background);
+    height: 40px;
+    padding: 0 11px 0 11px;
+    border-color: var(--terminal-black);
+    align-items: center;
+    font-size: 13pt;
+    font-weight: bold;
+    font-family: "Source Code Pro", monospace;
 }
+
+#solve {
+    color: var(--aoc-star);
+    text-shadow: var(--aoc-star-shadow);
+}
+
+#day {
+    color: var(--aoc-star);
+    text-shadow: var(--aoc-star-shadow);
+    appearance: none;
+    width: min-content;
+    font-family: "Source Code Pro", monospace;
+    position: relative;
+    text-align: center;
+    padding: 0;
+    border-style: dotted;
+    height: min-content;
+    cursor: pointer;
+}
+
 
 #output-left {
     display: flex;
@@ -104,6 +167,26 @@ select {
 .output-header-pair {
     display: flex;
     flex-direction: row;
-    gap: 2px;
     align-items: center;
+}
+
+#lower-right {
+    display: flex;
+}
+
+#day-container {
+    display: flex;
+    align-items: center;
+}
+
+#solver-container {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    padding: 10px;
+    border-style: solid;
+    border-color: var(--terminal-black);
+    border-width: 2px;
+    gap: 10px;
+    width: min-content;
 }

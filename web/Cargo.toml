@@ -11,6 +11,7 @@ gloo-events = "0.2.0"
 gloo-console = "0.3.0"
 wasm-bindgen = "0.2.89"
 wasm-bindgen-futures = "0.4.39"
+anyhow = "1.0.75"
 solutions = { path = "../solutions" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
@@ -26,6 +27,7 @@ features = [
     "HtmlOptionsCollection",
     "Clipboard",
     "Navigator",
+    "UrlSearchParams"
 ]
 
 

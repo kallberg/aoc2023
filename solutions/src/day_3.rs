@@ -86,8 +86,6 @@ impl Solver for Day {
 
             if reading_part {
                 let part_string: String = part_chars.iter().collect();
-                part_chars.clear();
-
                 let part_value: u32 = part_string.parse()?;
 
                 let width = (part_value.ilog10() + 1) as usize;
@@ -101,7 +99,6 @@ impl Solver for Day {
                 };
 
                 self.part_numbers.push(part);
-                reading_part = false;
             }
         }
 

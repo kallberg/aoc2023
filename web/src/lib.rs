@@ -16,7 +16,7 @@ mod wasm {
     use crate::ui;
 
     pub async fn bind() {
-        let mut state = State::from_location(&gloo_utils::window().location()).unwrap_or_default();
+        let state = State::from_location(&gloo_utils::window().location()).unwrap_or_default();
 
         let mut ui_ref = UIRef::new(state);
 

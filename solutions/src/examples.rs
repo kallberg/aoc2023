@@ -24,7 +24,7 @@ pub static TWENTY_THREE: &str = include_str!("../example/23");
 pub static TWENTY_FOUR: &str = include_str!("../example/24");
 pub static TWENTY_FIVE: &str = include_str!("../example/25");
 //noinspection ALL
-fn get(index: usize) -> &'static str {
+pub fn get(index: usize) -> &'static str {
     match index {
         1 => ONE,
         2 => TWO,

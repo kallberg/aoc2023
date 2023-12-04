@@ -2,6 +2,7 @@ use anyhow::Result;
 mod day_1;
 mod day_2;
 mod day_3;
+mod day_4;
 pub mod examples;
 pub mod input;
 pub mod solvers;

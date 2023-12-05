@@ -8,7 +8,7 @@ pub struct State {
 
 impl Default for State {
     fn default() -> Self {
-        Self { day: 4 }
+        Self { day: 5 }
     }
 }
 

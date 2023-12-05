@@ -3,7 +3,8 @@ mod day_1;
 mod day_2;
 mod day_3;
 mod day_4;
-pub mod examples;
+mod day_5;
+pub mod example;
 pub mod input;
 pub mod solvers;
 

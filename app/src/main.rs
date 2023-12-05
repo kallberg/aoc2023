@@ -19,13 +19,19 @@ fn print_day(day: Box<dyn Solver>, index: usize) {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
-    let mut solver = solvers::Solvers::get(4).unwrap();
+    let day = 5;
+    let example = false;
+    let mut solver = solvers::Solvers::get(day).unwrap();
 
-    //solver.setup(examples::get(4));
-    solver.setup(input::get(4));
+    if example {
+        solver.setup(example::get(day));
+    } else {
+        solver.setup(input::get(day));
+    }
+
     solver.parse().unwrap();
 
-    print_day(solver, 4);
+    print_day(solver, day);
 }
 
 #[cfg(target_arch = "wasm32")]

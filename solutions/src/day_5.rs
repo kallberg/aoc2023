@@ -1,30 +1,87 @@
 use crate::Solver;
 use anyhow::Result;
+use std::ops::Range;
 use std::str::Lines;
 
+fn intersects(output_range: &Range<usize>, input_range: &Range<usize>) -> bool {
+    output_range.start <= input_range.end && output_range.end > input_range.start
+}
+
+struct Mapping {
+    range: Range<usize>,
+    delta: isize,
+}
+
 #[derive(Default)]
-struct Map(pub Vec<(usize, usize, usize)>);
+struct Map {
+    mappings: Vec<Mapping>,
+}
 
 impl Map {
     fn add_mapping(&mut self, dst_start: usize, src_start: usize, length: usize) {
-        self.0.push((dst_start, src_start, length));
+        self.mappings.push(Mapping {
+            range: src_start..(src_start + length),
+            delta: dst_start as isize - src_start as isize,
+        });
     }
 
-    fn lookup(&self, src: usize) -> usize {
-        for (dst_start, src_start, length) in self.0.clone() {
-            let src_range = src_start..(src_start + length);
-            let mut dst_range = dst_start..(dst_start + length);
-
-            if src_range.contains(&src) {
-                let index = src - src_range.start;
-
-                let dst = dst_range.nth(index).unwrap();
-
-                return dst;
+    fn map_one(&self, src: usize) -> usize {
+        for mapping in &self.mappings {
+            if mapping.range.contains(&src) {
+                return (src as isize + mapping.delta) as usize;
             }
         }
 
         src
+    }
+
+    fn map_range(&self, range: Range<usize>) -> Vec<Range<usize>> {
+        let mut output = vec![];
+
+        let intersecting_mappings = self
+            .mappings
+            .iter()
+            .filter(|mapping| intersects(&mapping.range, &range));
+
+        let mut start = range.start;
+
+        for mapping in intersecting_mappings {
+            if start < mapping.range.start {
+                output.push(start..mapping.range.start);
+                start = mapping.range.end;
+            }
+
+            let mapped_start = ((start as isize) + mapping.delta) as usize;
+            let range_mapped_end = (range.end as isize + mapping.delta) as usize;
+            let mapping_mapped_end = (mapping.range.end as isize + mapping.delta) as usize;
+            let mapped_end = mapping_mapped_end.min(range_mapped_end);
+
+            output.push(mapped_start..mapped_end);
+
+            start = range.end.min(mapping.range.end);
+        }
+
+        if start < range.end {
+            output.push(start..range.end)
+        }
+
+        output
+    }
+
+    fn map_ranges(&self, inputs: Vec<Range<usize>>) -> Vec<Range<usize>> {
+        let mut output = vec![];
+
+        for input in inputs {
+            let mut mapped = self.map_range(input);
+
+            mapped.sort_by(|a, b| a.start.cmp(&b.start));
+
+            for range in mapped {
+                output.push(range);
+            }
+        }
+
+        output
     }
 }
 
@@ -43,13 +100,25 @@ pub struct Day {
 
 impl Day {
     fn location(&self, seed: usize) -> usize {
-        let soil = self.seed.lookup(seed);
-        let fertilizer = self.soil.lookup(soil);
-        let water = self.fertilizer.lookup(fertilizer);
-        let light = self.water.lookup(water);
-        let temperature = self.light.lookup(light);
-        let humidity = self.temperature.lookup(temperature);
-        let location = self.humidity.lookup(humidity);
+        let soil = self.seed.map_one(seed);
+        let fertilizer = self.soil.map_one(soil);
+        let water = self.fertilizer.map_one(fertilizer);
+        let light = self.water.map_one(water);
+        let temperature = self.light.map_one(light);
+        let humidity = self.temperature.map_one(temperature);
+        let location = self.humidity.map_one(humidity);
+
+        location
+    }
+
+    fn location_ranges(&self, seed_ranges: Vec<Range<usize>>) -> Vec<Range<usize>> {
+        let soil = self.seed.map_ranges(seed_ranges);
+        let fertilizer = self.soil.map_ranges(soil);
+        let water = self.fertilizer.map_ranges(fertilizer);
+        let light = self.water.map_ranges(water);
+        let temperature = self.light.map_ranges(light);
+        let humidity = self.temperature.map_ranges(temperature);
+        let location = self.humidity.map_ranges(humidity);
 
         location
     }
@@ -85,6 +154,9 @@ impl Solver for Day {
                 line = lines.next().unwrap_or_default();
             }
 
+            map.mappings
+                .sort_by(|a, b| a.range.start.cmp(&b.range.start));
+
             lines.next();
         }
 
@@ -113,6 +185,19 @@ impl Solver for Day {
     }
 
     fn part_2(&self) -> Result<String> {
-        Ok(String::from("Placeholder"))
+        let seed_ranges: Vec<Range<usize>> = self
+            .seeds
+            .chunks_exact(2)
+            .map(|chunks| chunks[0]..(chunks[0] + chunks[1]))
+            .collect();
+
+        let min = self
+            .location_ranges(seed_ranges)
+            .iter()
+            .map(|range| range.start)
+            .min()
+            .unwrap_or(usize::MAX);
+
+        Ok(min.to_string())
     }
 }

@@ -7,6 +7,19 @@
     box-sizing: border-box;
 }
 
+div {
+    display: flex;
+    flex-direction: column;
+    width: min-content;
+}
+
+.row-flex {
+    display: flex;
+    flex-direction: row;
+    width: min-content;
+    align-items: center;
+}
+
 html {
     --background: #24283b;
     --foreground: #a9b1d6;
@@ -22,7 +35,6 @@ html {
 html, body {
     width: 100%;
     height: 100%;
-    overflow: hidden;
     font-family: "Source Code Pro", monospace;
     font-size: 14pt;
     background: var(--background);
@@ -125,6 +137,7 @@ label {
     font-size: 13pt;
     font-weight: bold;
     font-family: "Source Code Pro", monospace;
+    white-space: pre;
 }
 
 #solve {
@@ -162,6 +175,8 @@ label {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-direction: row;
+    width: 100%;
 }
 
 .output-header-pair {
@@ -176,6 +191,7 @@ label {
 
 #day-container {
     display: flex;
+    flex-direction: row;
     align-items: center;
 }
 
@@ -189,4 +205,17 @@ label {
     border-width: 2px;
     gap: 10px;
     width: min-content;
+}
+
+h1 a {
+    text-decoration: none;
+    color: var(--aoc-green);
+    text-shadow: var(--aoc-green-shadow);
+    white-space: pre;
+}
+
+#header-bottom {
+    gap: 10px;
+    width: 100%;
+    justify-content: space-between;
 }

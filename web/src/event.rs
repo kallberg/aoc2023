@@ -2,7 +2,6 @@ use crate::ui::UIRef;
 use gloo_events::EventListener;
 use solutions::input::get;
 use solutions::solvers::Solvers;
-use wasm_bindgen::closure::Closure;
 
 pub struct EventProcessor {
     ui_ref: UIRef,
@@ -34,6 +33,7 @@ impl EventProcessor {
     fn day_select_handler(ui_ref: &mut UIRef) {
         ui_ref.clear_outputs();
         ui_ref.set_input(get(ui_ref.day()));
+        let _result = ui_ref.save_state(&mut gloo_utils::window().location());
     }
 
     fn solve_handler(ui_ref: &mut UIRef) {

@@ -1,4 +1,5 @@
 use crate::state::State;
+use anyhow::Result;
 use std::fmt::Display;
 use web_sys::wasm_bindgen::JsCast;
 use web_sys::{
@@ -8,7 +9,6 @@ use web_sys::{
 
 #[derive(Clone)]
 pub struct UIRef {
-    state: State,
     input: HtmlTextAreaElement,
     part_1: HtmlDivElement,
     part_2: HtmlDivElement,
@@ -80,9 +80,15 @@ impl UIRef {
             day,
             part_1_button,
             part_2_button,
-            state,
         }
     }
+
+    fn state(&self) -> State {
+        State {
+            day: self.day() as u8,
+        }
+    }
+
     pub fn solve_event_target(&self) -> EventTarget {
         self.solve.dyn_ref::<EventTarget>().unwrap().clone()
     }
@@ -111,9 +117,8 @@ impl UIRef {
         selection.value().parse().unwrap()
     }
 
-    pub fn save_state(&mut self, location: &mut Location) {
-        self.state.day = self.day() as u8;
-        self.state.write_location(location);
+    pub fn save_state(&mut self, location: &mut Location) -> Result<()> {
+        self.state().write_location(location)
     }
 
     pub fn set_input(&mut self, input: &str) {

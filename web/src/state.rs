@@ -1,5 +1,5 @@
-use anyhow::Result;
-use web_sys::{Location, UrlSearchParams};
+use anyhow::{bail, Result};
+use web_sys::Location;
 
 #[derive(Clone)]
 pub struct State {
@@ -14,23 +14,29 @@ impl Default for State {
 
 impl State {
     pub fn from_location(location: &Location) -> Option<State> {
-        let search = location.search().ok()?;
-        let params = UrlSearchParams::new_with_str(&search).ok()?;
-        let day_str = params.get("day")?;
-        let day = day_str.parse().ok()?;
+        let href: String = location.href().ok()?;
+        let split = href.split_once('#')?;
+        let state_str = split.1;
+        let day = state_str.parse::<u8>().ok()?;
 
         Some(State { day })
     }
 
-    pub fn write_location(&self, location: &mut Location) {
-        let Ok(params) = UrlSearchParams::new() else {
-            return;
+    pub fn write_location(&self, location: &mut Location) -> Result<()> {
+        let Ok(mut href) = location.href() else {
+            bail!("unable to get href")
         };
 
-        params.set("day", &self.day.to_string());
+        if let Some(split) = href.split_once('#') {
+            href = format!("{}#{}", split.0, self.day);
+        } else {
+            href = format!("{}#{}", href, self.day);
+        }
 
-        let search = params.to_string().as_string().unwrap();
+        if location.set_href(&href).is_err() {
+            bail!("unable to update href")
+        }
 
-        let _result = location.set_search(&search);
+        Ok(())
     }
 }

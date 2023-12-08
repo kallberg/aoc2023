@@ -8,7 +8,7 @@ use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use thiserror::Error;
 
-#[derive(PartialEq, Eq, Ord, PartialOrd, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub enum CamelCard {
     C2,
     C3,
@@ -19,14 +19,14 @@ pub enum CamelCard {
     C8,
     C9,
     T,
-    J,
+    J(bool),
     Q,
     K,
     A,
 }
 
-impl Into<usize> for &CamelCard {
-    fn into(self) -> usize {
+impl CamelCard {
+    fn index(&self) -> usize {
         match self {
             CamelCard::C2 => 0,
             CamelCard::C3 => 1,
@@ -37,11 +37,42 @@ impl Into<usize> for &CamelCard {
             CamelCard::C8 => 6,
             CamelCard::C9 => 7,
             CamelCard::T => 8,
-            CamelCard::J => 9,
+            CamelCard::J(_) => 9,
             CamelCard::Q => 10,
             CamelCard::K => 11,
             CamelCard::A => 12,
         }
+    }
+
+    fn value(&self) -> usize {
+        match self {
+            CamelCard::J(true) => 1,
+            CamelCard::C2 => 2,
+            CamelCard::C3 => 3,
+            CamelCard::C4 => 4,
+            CamelCard::C5 => 5,
+            CamelCard::C6 => 6,
+            CamelCard::C7 => 7,
+            CamelCard::C8 => 8,
+            CamelCard::C9 => 9,
+            CamelCard::T => 10,
+            CamelCard::J(false) => 11,
+            CamelCard::Q => 12,
+            CamelCard::K => 13,
+            CamelCard::A => 14,
+        }
+    }
+}
+
+impl PartialOrd for CamelCard {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.value().partial_cmp(&other.value())
+    }
+}
+
+impl Ord for CamelCard {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.value().cmp(&other.value())
     }
 }
 
@@ -59,7 +90,7 @@ impl TryFrom<char> for CamelCard {
             'A' => CamelCard::A,
             'K' => CamelCard::K,
             'Q' => CamelCard::Q,
-            'J' => CamelCard::J,
+            'J' => CamelCard::J(false),
             'T' => CamelCard::T,
             '9' => CamelCard::C9,
             '8' => CamelCard::C8,
@@ -74,9 +105,10 @@ impl TryFrom<char> for CamelCard {
     }
 }
 
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Clone)]
 struct Hand {
     cards: [CamelCard; 5],
+    hand_type: HandType,
 }
 
 impl Display for Hand {
@@ -95,7 +127,7 @@ impl Display for Hand {
                     CamelCard::C8 => '8',
                     CamelCard::C9 => '9',
                     CamelCard::T => 'T',
-                    CamelCard::J => 'J',
+                    CamelCard::J(_) => 'J',
                     CamelCard::Q => 'Q',
                     CamelCard::K => 'K',
                     CamelCard::A => 'A',
@@ -108,18 +140,41 @@ impl Display for Hand {
 }
 
 impl Hand {
-    fn hand_type(&self) -> HandType {
-        let mut kinds = [0; 13];
+    fn new(cards: [CamelCard; 5]) -> Self {
+        Self {
+            cards,
+            hand_type: Hand::hand_type(&cards),
+        }
+    }
 
-        for card in &self.cards {
-            let index: usize = card.into();
+    fn enable_jokers(&mut self) {
+        for card in self.cards.iter_mut() {
+            if CamelCard::J(false).eq(card) {
+                *card = CamelCard::J(true);
+            }
+        }
+
+        self.hand_type = Hand::hand_type(&self.cards);
+    }
+    fn hand_type(cards: &[CamelCard; 5]) -> HandType {
+        let mut kinds = [0; 13];
+        let mut jokers = 0;
+
+        for card in cards {
+            if CamelCard::J(true).eq(card) {
+                jokers += 1;
+                continue;
+            }
+            let index: usize = card.index();
             kinds[index] += 1;
         }
 
         kinds.sort();
         kinds.reverse();
 
-        match (kinds[0], kinds[1]) {
+        kinds[0] += jokers;
+
+        let hand_type = match (kinds[0], kinds[1]) {
             (5, _) => FiveOfAKind,
             (4, _) => FourOfAKind,
             (3, 2) => FullHouse,
@@ -127,14 +182,16 @@ impl Hand {
             (2, 2) => TwoPair,
             (2, _) => OnePair,
             _ => HighCard,
-        }
+        };
+
+        hand_type
     }
 }
 
 impl PartialOrd<Self> for Hand {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        let self_type = self.hand_type();
-        let other_type = other.hand_type();
+        let self_type = self.hand_type;
+        let other_type = other.hand_type;
 
         if self_type != other_type {
             return self_type.partial_cmp(&other_type);
@@ -146,8 +203,8 @@ impl PartialOrd<Self> for Hand {
 
 impl Ord for Hand {
     fn cmp(&self, other: &Self) -> Ordering {
-        let self_type = self.hand_type();
-        let other_type = other.hand_type();
+        let self_type = self.hand_type;
+        let other_type = other.hand_type;
 
         if self_type != other_type {
             return self_type.cmp(&other_type);
@@ -157,7 +214,7 @@ impl Ord for Hand {
     }
 }
 
-#[derive(PartialEq, Eq, Ord, PartialOrd, Debug)]
+#[derive(PartialEq, Eq, Ord, PartialOrd, Debug, Copy, Clone)]
 pub enum HandType {
     HighCard,
     OnePair,
@@ -197,10 +254,8 @@ impl Solver for Day {
 
             let bid: u32 = right.parse()?;
 
-            self.plays.push((Hand { cards }, bid));
+            self.plays.push((Hand::new(cards), bid));
         }
-
-        self.plays.sort_by(|(a, _), (b, _)| a.cmp(&b));
 
         Ok(())
     }
@@ -208,8 +263,11 @@ impl Solver for Day {
     fn part_1(&self) -> Result<String> {
         let mut sum = 0;
 
-        for (index, (hand, bid)) in self.plays.iter().enumerate() {
-            println!("{} {:?}", hand, hand.hand_type());
+        let mut plays = self.plays.clone();
+
+        plays.sort();
+
+        for (index, (_, bid)) in plays.iter().enumerate() {
             sum += bid * (index as u32 + 1);
         }
 
@@ -217,6 +275,20 @@ impl Solver for Day {
     }
 
     fn part_2(&self) -> Result<String> {
-        Ok("Placeholder".to_string())
+        let mut sum = 0;
+
+        let mut plays = self.plays.clone();
+
+        for (hand, _) in plays.iter_mut() {
+            hand.enable_jokers();
+        }
+
+        plays.sort();
+
+        for (index, (hand, bid)) in plays.iter().enumerate() {
+            sum += bid * (index as u32 + 1);
+        }
+
+        Ok(sum.to_string())
     }
 }

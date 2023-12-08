@@ -1,9 +1,10 @@
 #[cfg(not(target_arch = "wasm32"))]
 use solutions::*;
-use std::time::Instant;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn print_day(mut day: Box<dyn Solver>, index: usize) {
+    use std::time::Instant;
+
     let time_start = Instant::now();
     day.parse().unwrap();
     let parse_time = time_start.elapsed();

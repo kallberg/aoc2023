@@ -1,4 +1,4 @@
-use crate::{day_1, day_2, day_3, day_4, day_5, day_6, Solver};
+use crate::{day_1, day_2, day_3, day_4, day_5, day_6, day_7, Solver};
 
 pub struct Solvers;
 
@@ -19,6 +19,7 @@ impl Solvers {
             4 => Some(Box::new(day_4::Day::default())),
             5 => Some(Box::new(day_5::Day::default())),
             6 => Some(Box::new(day_6::Day::default())),
+            7 => Some(Box::new(day_7::Day::default())),
             _ => None,
         }
     }

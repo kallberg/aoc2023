@@ -285,7 +285,7 @@ impl Solver for Day {
 
         plays.sort();
 
-        for (index, (hand, bid)) in plays.iter().enumerate() {
+        for (index, (_hand, bid)) in plays.iter().enumerate() {
             sum += bid * (index as u32 + 1);
         }
 

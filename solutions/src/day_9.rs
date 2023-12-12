@@ -20,18 +20,28 @@ fn report_sequence(report: &[i64], differences: &mut Vec<Vec<i64>>) {
     report_sequence(&difference, differences);
 }
 
-fn predict(report: &[i64]) -> i64 {
+fn predict(report: &[i64], backwards: bool) -> i64 {
     let mut sequences = vec![];
     report_sequence(report, &mut sequences);
 
-    let lasts = sequences
-        .into_iter()
-        .map(|sequence| *sequence.last().unwrap());
+    let sides = sequences.into_iter().map(|sequence| {
+        if backwards {
+            *sequence.first().unwrap()
+        } else {
+            *sequence.last().unwrap()
+        }
+    });
 
     let mut sum = 0;
 
-    for last in lasts {
-        sum += last;
+    if backwards {
+        for side in sides.rev() {
+            sum = side - sum;
+        }
+    } else {
+        for side in sides {
+            sum += side;
+        }
     }
 
     sum
@@ -65,15 +75,21 @@ impl Solver for Day {
         let mut all_sums = 0;
 
         for report in &self.reports {
-            let sum = predict(&report);
-            println!("{}", sum);
-            all_sums += predict(report);
+            let sum = predict(&report, false);
+            all_sums += sum;
         }
 
         Ok(all_sums.to_string())
     }
 
     fn part_2(&self) -> anyhow::Result<String> {
-        Ok("Placeholder".into())
+        let mut all_sums = 0;
+
+        for report in &self.reports {
+            let sum = predict(&report, true);
+            all_sums += sum;
+        }
+
+        Ok(all_sums.to_string())
     }
 }

@@ -42,7 +42,7 @@ fn print_day(mut day: Box<dyn Solver>, index: usize, parts: Parts) {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
-    let day = 8;
+    let day = 9;
     let example = false;
     let mut solver = solvers::Solvers::get(day).unwrap();
 

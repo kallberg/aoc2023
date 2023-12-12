@@ -7,6 +7,8 @@ mod day_5;
 mod day_6;
 mod day_7;
 mod day_8;
+mod day_9;
+mod day_x;
 pub mod example;
 pub mod input;
 pub mod solvers;

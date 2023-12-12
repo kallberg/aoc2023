@@ -1,16 +1,42 @@
 use crate::Solver;
 use anyhow::Result;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::fmt::{Display, Formatter};
 use thiserror::Error;
 
+fn gcd(a: usize, b: usize) -> usize {
+    if b == 0 {
+        a
+    } else {
+        gcd(b, a % b)
+    }
+}
+
+fn lcm(a: usize, b: &usize) -> usize {
+    a * b / gcd(a, *b)
+}
+
 pub struct Node {
+    id: String,
     left: String,
     right: String,
+    ghost_start: bool,
+    ghost_end: bool,
 }
 
 pub enum Instruction {
     Left,
     Right,
+}
+
+impl Display for Instruction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Instruction::Left => 'L',
+            Instruction::Right => 'R',
+        }
+        .fmt(f)
+    }
 }
 
 #[derive(Error, Debug)]
@@ -44,6 +70,45 @@ pub struct Day {
     nodes: HashMap<String, Node>,
 }
 
+fn ghost_endpoints(
+    id: &str,
+    instructions: &Vec<Instruction>,
+    nodes: &HashMap<String, Node>,
+) -> Vec<usize> {
+    let instruction_set_size = instructions.len();
+    let mut node = nodes.get(id).unwrap();
+    let mut endpoints = vec![];
+    let mut seen: HashSet<(usize, &str)> = HashSet::new();
+
+    seen.insert((0, id));
+
+    let mut program_counter = 0;
+    let mut instruction_index = program_counter % instruction_set_size;
+
+    loop {
+        let instruction = &instructions[instruction_index];
+
+        match instruction {
+            Instruction::Left => node = nodes.get(&node.left).unwrap(),
+            Instruction::Right => node = nodes.get(&node.right).unwrap(),
+        }
+
+        if node.ghost_end {
+            endpoints.push(program_counter);
+        }
+
+        program_counter += 1;
+        instruction_index = program_counter % instruction_set_size;
+
+        if seen.contains(&(instruction_index, &node.id)) {
+            break;
+        }
+
+        seen.insert((instruction_index, &node.id));
+    }
+    endpoints
+}
+
 impl Solver for Day {
     fn setup(&mut self, input: &str) {
         self.input = input.to_string();
@@ -75,7 +140,13 @@ impl Solver for Day {
             let left = left.to_string();
             let right = right.to_string();
 
-            let node = Node { left, right };
+            let node = Node {
+                id: id.clone(),
+                left,
+                right,
+                ghost_start: id.ends_with('A'),
+                ghost_end: id.ends_with('Z'),
+            };
 
             self.nodes.insert(id, node);
         }
@@ -89,7 +160,7 @@ impl Solver for Day {
         let mut current_node = "AAA";
         let mut steps = 0;
 
-        loop {
+        while current_node != "ZZZ" {
             let instruction = instructions.next().unwrap();
             let node = self.nodes.get(current_node).ok_or(DayError::MissingNode)?;
 
@@ -98,16 +169,24 @@ impl Solver for Day {
                 Instruction::Right => current_node = &node.right,
             }
             steps += 1;
-
-            if current_node == "ZZZ" {
-                break;
-            }
         }
 
         Ok(steps.to_string())
     }
 
     fn part_2(&self) -> Result<String> {
-        Ok("Placeholder".into())
+        let mut all_endpoints = vec![];
+
+        for node in self.nodes.values() {
+            if node.ghost_start {
+                for index in ghost_endpoints(&node.id, &self.instructions, &self.nodes) {
+                    all_endpoints.push(index + 1)
+                }
+            }
+        }
+
+        let lcm = all_endpoints.iter().fold(1usize, lcm);
+
+        Ok(lcm.to_string())
     }
 }

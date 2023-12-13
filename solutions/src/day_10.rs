@@ -1,7 +1,5 @@
 use crate::Solver;
 use anyhow::{Error, Result};
-use std::collections::HashSet;
-use std::fmt::{Display, Formatter};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -465,38 +463,6 @@ impl PipeKind {
     }
 }
 
-impl Display for Grid {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let last = self.tiles.len() - 1;
-
-        for (index, row) in self.tiles.iter().enumerate() {
-            for tile in row {
-                write!(
-                    f,
-                    "{}",
-                    match &tile.tile_kind {
-                        TileKind::RegularPipe(kind) => match kind {
-                            PipeKind::Vertical => '|',
-                            PipeKind::Horizontal => '-',
-                            PipeKind::NorthEast => 'L',
-                            PipeKind::NorthWest => 'J',
-                            PipeKind::SouthWest => '7',
-                            PipeKind::SouthEast => 'F',
-                        },
-                        TileKind::StartPipe => 'S',
-                        TileKind::Ground => 'I',
-                    }
-                )?;
-            }
-            if index != last {
-                writeln!(f)?;
-            }
-        }
-
-        Ok(())
-    }
-}
-
 #[derive(Default)]
 pub struct Day {
     input: String,
@@ -565,32 +531,31 @@ impl Solver for Day {
     }
 
     fn part_2(&self) -> Result<String> {
-        let mut inside = HashSet::new();
+        let mut total = 0;
 
         for (y, row) in self.grid.tiles.iter().enumerate() {
-            let mut within = false;
-            let mut up = None;
+            let mut enclosed = false;
+            let mut passed_north = false;
 
             for (x, tile) in row.iter().enumerate() {
                 match &tile.tile_kind {
                     tile @ TileKind::RegularPipe(pipe) => match pipe {
                         PipeKind::Vertical => {
-                            within = !within;
+                            enclosed = !enclosed;
                         }
                         PipeKind::NorthEast | PipeKind::SouthEast => {
-                            up = Some(*tile == TileKind::RegularPipe(PipeKind::NorthEast))
+                            passed_north = *tile == TileKind::RegularPipe(PipeKind::NorthEast)
                         }
                         PipeKind::NorthWest | PipeKind::SouthWest => {
-                            if *tile
-                                == if up != Some(true) {
-                                    TileKind::RegularPipe(PipeKind::NorthWest)
-                                } else {
-                                    TileKind::RegularPipe(PipeKind::SouthWest)
-                                }
-                            {
-                                within = !within;
+                            let pass_blocker = if !passed_north {
+                                TileKind::RegularPipe(PipeKind::NorthWest)
+                            } else {
+                                TileKind::RegularPipe(PipeKind::SouthWest)
+                            };
+
+                            if pass_blocker.eq(tile) {
+                                enclosed = !enclosed;
                             }
-                            up = None;
                         }
                         _ => {}
                     },
@@ -599,12 +564,12 @@ impl Solver for Day {
                         unreachable!()
                     }
                 }
-                if within && self.grid.tiles[y][x].tile_kind == TileKind::Ground {
-                    inside.insert((y, x));
+                if enclosed && self.grid.tiles[y][x].tile_kind == TileKind::Ground {
+                    total += 1;
                 }
             }
         }
 
-        Ok(inside.len().to_string())
+        Ok(total.to_string())
     }
 }

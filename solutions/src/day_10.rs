@@ -35,19 +35,6 @@ impl Cardinal {
             Cardinal::South => Cardinal::North,
         }
     }
-
-    fn left(self) -> Self {
-        match self {
-            Cardinal::North => Cardinal::West,
-            Cardinal::West => Cardinal::South,
-            Cardinal::East => Cardinal::North,
-            Cardinal::South => Cardinal::East,
-        }
-    }
-
-    fn right(self) -> Self {
-        self.left().inverse()
-    }
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -118,17 +105,10 @@ impl PipeKind {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-enum StartKind {
-    Unknown,
-    Pipe(PipeKind),
-}
-
-#[derive(Clone, PartialEq, Eq)]
 enum TileKind {
     RegularPipe(PipeKind),
-    StartPipe(StartKind),
+    StartPipe,
     Ground,
-    Fill,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -210,7 +190,7 @@ impl Grid {
 
         for row in self.tiles.iter() {
             for tile in row.iter() {
-                if tile.regular_pipe() && tile.connections(self) < 2 {
+                if tile.regular_pipe() && tile.connections(self) != 2 {
                     ground_positions.push(tile.position);
                 }
             }
@@ -236,13 +216,8 @@ impl Grid {
             .tile(self.start)
             .ok_or(Error::from(GridError::NoStartTile))?;
 
-        let TileKind::StartPipe(start_kind) = &start.tile_kind else {
+        if start.tile_kind != TileKind::StartPipe {
             return Err(Error::from(GridError::BadStartTileKind));
-        };
-
-        match start_kind {
-            StartKind::Unknown => {}
-            StartKind::Pipe(_) => return Ok(()),
         }
 
         if start.connections(self) != 2 {
@@ -268,7 +243,7 @@ impl Grid {
 
         let start = self.tile_mut(self.start).unwrap();
 
-        start.tile_kind = TileKind::StartPipe(StartKind::Pipe(match (north, west, east, south) {
+        start.tile_kind = TileKind::RegularPipe(match (north, west, east, south) {
             (true, true, false, false) => PipeKind::NorthWest,
             (true, false, true, false) => PipeKind::NorthEast,
             (true, false, false, true) => PipeKind::Vertical,
@@ -276,111 +251,64 @@ impl Grid {
             (false, true, false, true) => PipeKind::SouthWest,
             (false, false, true, true) => PipeKind::SouthEast,
             _ => return Err(Error::from(GridError::IndeterminateStart)),
-        }));
+        });
 
         Ok(())
     }
 
-    fn flood_fill(
-        &mut self,
-        from: Point2,
-        direction: Cardinal,
-        visited: &mut HashSet<(Point2, Cardinal)>,
-    ) {
-        if !visited.insert((from, direction)) {
-            return;
-        }
+    fn isolate_loop(&mut self) -> Result<()> {
+        let start_tile = self.tile(self.start).unwrap();
 
-        if self.tiles.is_empty() {
-            return;
-        }
+        let TileKind::RegularPipe(start_pipe) = &start_tile.tile_kind else {
+            return Err(Error::from(GridError::IndeterminateStart));
+        };
 
-        if from.x < 0 || from.y < 0 {
-            return;
-        }
+        let mut entry = None;
 
-        let x = from.x as usize;
-        let y = from.y as usize;
-
-        if y >= self.tiles.len() || x >= self.tiles[y].len() {
-            return;
-        }
-
-        match &mut self.tiles[y][x].tile_kind {
-            tile @ TileKind::Ground => {
-                *tile = TileKind::Fill;
-
-                let left = from.translate(direction.left());
-                let right = from.translate(direction.right());
-                let forward = from.translate(direction);
-
-                self.flood_fill(left, direction.left(), visited);
-                self.flood_fill(right, direction.right(), visited);
-                self.flood_fill(forward, direction, visited);
+        for direction in [
+            Cardinal::North,
+            Cardinal::West,
+            Cardinal::East,
+            Cardinal::South,
+        ] {
+            if let Some(exit) = start_pipe.enter(direction) {
+                entry = Some(exit);
+                break;
             }
-            TileKind::RegularPipe(pipe) | TileKind::StartPipe(StartKind::Pipe(pipe)) => {
-                let mut forward = from.translate(direction);
-
-                let Some(entry) = pipe.enter(direction) else {
-                    return;
-                };
-
-                let mut exit_position = forward;
-
-                while let Some(forward_tile) = self.tile(forward) {
-                    if let Some(forward_pipe) = forward_tile.pipe() {
-                        exit_position = forward_tile.position;
-                        forward = forward.translate(direction);
-
-                        if let Some(forward_exit) = forward_pipe.enter(direction.inverse()) {
-                            if forward_exit != direction && forward_exit != entry {
-                                break;
-                            }
-                        }
-                    } else {
-                        break;
-                    }
-                }
-
-                let Some(exit_tile) = self.tile(exit_position) else {
-                    return;
-                };
-
-                let Some(exit_pipe) = exit_tile.pipe() else {
-                    return;
-                };
-
-                let Some(exit) = exit_pipe.enter(direction.inverse()) else {
-                    return;
-                };
-
-                if exit == entry {
-                    let from = exit_position.translate(direction);
-                    self.flood_fill(from, direction, visited);
-                }
-            }
-            _ => return,
         }
+
+        let mut entry = entry.ok_or(Error::from(GridError::IndeterminateStart))?;
+        let mut tile = start_tile;
+
+        let mut tiles = self.tiles.clone();
+
+        tiles.iter_mut().for_each(|row| {
+            row.iter_mut().for_each(|tile| {
+                *tile = Tile {
+                    position: tile.position,
+                    tile_kind: TileKind::Ground,
+                }
+            })
+        });
+
+        loop {
+            (tile, entry) = tile.traverse(self, entry)?;
+
+            tiles[tile.position.y as usize][tile.position.x as usize].tile_kind =
+                tile.tile_kind.clone();
+
+            if tile == start_tile {
+                break;
+            }
+        }
+
+        self.tiles = tiles;
+
+        Ok(())
     }
 }
 
 impl Tile {
-    fn connected(&self, grid: &Grid, cardinal: Cardinal) -> bool {
-        if self.tile_kind.connects(cardinal) {
-            if let Some(neighbour) = self.cardinal_neighbour(grid, cardinal) {
-                if neighbour.tile_kind.connects(cardinal.inverse()) {
-                    return true;
-                }
-            }
-        }
-
-        false
-    }
-
-    fn cardinal_neighbour<'a>(&'a self, grid: &'a Grid, cardinal: Cardinal) -> Option<&Tile> {
-        grid.tile(self.position.translate(cardinal))
-    }
-
     fn east<'a>(&'a self, grid: &'a Grid) -> Option<&Tile> {
         let mut position = self.position;
         position.x += 1;
@@ -458,7 +386,7 @@ impl Tile {
         let leaky = Error::from(GridError::LeakyPipeSystem);
 
         let pipe = match &self.tile_kind {
-            TileKind::RegularPipe(kind) | TileKind::StartPipe(StartKind::Pipe(kind)) => kind,
+            TileKind::RegularPipe(kind) => kind,
             _ => return Err(leaky),
         };
 
@@ -471,84 +399,43 @@ impl Tile {
 
         Ok((tile, entrypoint))
     }
-
-    fn pipe(&self) -> Option<PipeKind> {
-        match &self.tile_kind {
-            TileKind::RegularPipe(pipe) | TileKind::StartPipe(StartKind::Pipe(pipe)) => {
-                Some(pipe.clone())
-            }
-            _ => None,
-        }
-    }
 }
 
 impl TileKind {
-    fn connects(&self, cardinal: Cardinal) -> bool {
-        match self {
-            TileKind::StartPipe(StartKind::Pipe(pipe)) | TileKind::RegularPipe(pipe) => {
-                pipe.connects(cardinal)
-            }
-            TileKind::StartPipe(StartKind::Unknown) => true,
-            TileKind::Ground => false,
-            TileKind::Fill => false,
-        }
-    }
-
     fn connects_north(&self) -> bool {
         match self {
-            TileKind::StartPipe(StartKind::Pipe(pipe)) | TileKind::RegularPipe(pipe) => {
-                pipe.connects_north()
-            }
-            TileKind::StartPipe(StartKind::Unknown) => true,
+            TileKind::RegularPipe(pipe) => pipe.connects_north(),
+            TileKind::StartPipe => true,
             TileKind::Ground => false,
-            TileKind::Fill => false,
         }
     }
 
     fn connects_west(&self) -> bool {
         match self {
-            TileKind::StartPipe(StartKind::Pipe(pipe)) | TileKind::RegularPipe(pipe) => {
-                pipe.connects_west()
-            }
-            TileKind::StartPipe(StartKind::Unknown) => true,
+            TileKind::RegularPipe(pipe) => pipe.connects_west(),
+            TileKind::StartPipe => true,
             TileKind::Ground => false,
-            TileKind::Fill => false,
         }
     }
 
     fn connects_east(&self) -> bool {
         match self {
-            TileKind::StartPipe(StartKind::Pipe(pipe)) | TileKind::RegularPipe(pipe) => {
-                pipe.connects_east()
-            }
-            TileKind::StartPipe(StartKind::Unknown) => true,
+            TileKind::RegularPipe(pipe) => pipe.connects_east(),
+            TileKind::StartPipe => true,
             TileKind::Ground => false,
-            TileKind::Fill => false,
         }
     }
 
     fn connects_south(&self) -> bool {
         match self {
-            TileKind::StartPipe(StartKind::Pipe(pipe)) | TileKind::RegularPipe(pipe) => {
-                pipe.connects_south()
-            }
-            TileKind::StartPipe(StartKind::Unknown) => true,
+            TileKind::RegularPipe(pipe) => pipe.connects_south(),
+            TileKind::StartPipe => true,
             TileKind::Ground => false,
-            TileKind::Fill => false,
         }
     }
 }
 
 impl PipeKind {
-    fn connects(&self, cardinal: Cardinal) -> bool {
-        match cardinal {
-            Cardinal::North => self.connects_north(),
-            Cardinal::West => self.connects_west(),
-            Cardinal::East => self.connects_east(),
-            Cardinal::South => self.connects_south(),
-        }
-    }
-
     fn connects_north(&self) -> bool {
         match self {
             PipeKind::Vertical | PipeKind::NorthWest | PipeKind::NorthEast => true,
@@ -588,8 +475,7 @@ impl Display for Grid {
                     f,
                     "{}",
                     match &tile.tile_kind {
-                        TileKind::StartPipe(StartKind::Pipe(kind))
-                        | TileKind::RegularPipe(kind) => match kind {
+                        TileKind::RegularPipe(kind) => match kind {
                             PipeKind::Vertical => '|',
                             PipeKind::Horizontal => '-',
                             PipeKind::NorthEast => 'L',
@@ -597,9 +483,8 @@ impl Display for Grid {
                             PipeKind::SouthWest => '7',
                             PipeKind::SouthEast => 'F',
                         },
-                        TileKind::StartPipe(StartKind::Unknown) => 'S',
+                        TileKind::StartPipe => 'S',
                         TileKind::Ground => 'I',
-                        TileKind::Fill => 'O',
                     }
                 )?;
             }
@@ -635,7 +520,7 @@ impl Solver for Day {
                     '7' => TileKind::RegularPipe(PipeKind::SouthWest),
                     'F' => TileKind::RegularPipe(PipeKind::SouthEast),
                     '.' => TileKind::Ground,
-                    'S' => TileKind::StartPipe(StartKind::Unknown),
+                    'S' => TileKind::StartPipe,
                     _ => return Err(Error::from(GridError::BadCharParse)),
                 };
 
@@ -644,7 +529,7 @@ impl Solver for Day {
                     y: y as i32,
                 };
 
-                if tile_kind == TileKind::StartPipe(StartKind::Unknown) {
+                if tile_kind == TileKind::StartPipe {
                     self.grid.start = position;
                 }
 
@@ -659,102 +544,67 @@ impl Solver for Day {
 
         self.grid.clean();
         self.grid.determine_start()?;
+        self.grid.isolate_loop()?;
 
         Ok(())
     }
 
     fn part_1(&self) -> Result<String> {
-        let start_tile = self.grid.tile(self.grid.start).unwrap();
+        let count = self
+            .grid
+            .tiles
+            .iter()
+            .flatten()
+            .filter(|tile| match tile.tile_kind {
+                TileKind::RegularPipe(_) => true,
+                _ => false,
+            })
+            .count();
 
-        let TileKind::StartPipe(StartKind::Pipe(start_pipe)) = &start_tile.tile_kind else {
-            return Err(Error::from(GridError::IndeterminateStart));
-        };
-
-        let mut entry = None;
-
-        for direction in [
-            Cardinal::North,
-            Cardinal::West,
-            Cardinal::East,
-            Cardinal::South,
-        ] {
-            if let Some(exit) = start_pipe.enter(direction) {
-                entry = Some(exit);
-                break;
-            }
-        }
-
-        let mut entry = entry.ok_or(Error::from(GridError::IndeterminateStart))?;
-        let mut tile = start_tile;
-
-        let mut steps = 0;
-
-        loop {
-            (tile, entry) = tile.traverse(&self.grid, entry)?;
-            steps += 1;
-
-            if tile == start_tile {
-                break;
-            }
-        }
-
-        let farthest = steps / 2;
-
-        Ok(farthest.to_string())
+        Ok((count / 2).to_string())
     }
 
     fn part_2(&self) -> Result<String> {
-        let mut grid = self.grid.clone();
-        let mut visited = HashSet::new();
+        let mut inside = HashSet::new();
 
-        let rows = grid.tiles.len();
+        for (y, row) in self.grid.tiles.iter().enumerate() {
+            let mut within = false;
+            let mut up = None;
 
-        for x in 0..self.grid.tiles[0].len() {
-            if grid.tiles[0][x].tile_kind == TileKind::Ground {
-                grid.flood_fill(Point2 { x: x as i32, y: 0 }, Cardinal::South, &mut visited);
-            }
-
-            if grid.tiles[rows - 1][x].tile_kind == TileKind::Ground {
-                grid.flood_fill(
-                    Point2 {
-                        x: x as i32,
-                        y: rows as i32 - 1,
+            for (x, tile) in row.iter().enumerate() {
+                match &tile.tile_kind {
+                    tile @ TileKind::RegularPipe(pipe) => match pipe {
+                        PipeKind::Vertical => {
+                            within = !within;
+                        }
+                        PipeKind::NorthEast | PipeKind::SouthEast => {
+                            up = Some(*tile == TileKind::RegularPipe(PipeKind::NorthEast))
+                        }
+                        PipeKind::NorthWest | PipeKind::SouthWest => {
+                            if *tile
+                                == if up != Some(true) {
+                                    TileKind::RegularPipe(PipeKind::NorthWest)
+                                } else {
+                                    TileKind::RegularPipe(PipeKind::SouthWest)
+                                }
+                            {
+                                within = !within;
+                            }
+                            up = None;
+                        }
+                        _ => {}
                     },
-                    Cardinal::North,
-                    &mut visited,
-                );
-            }
-        }
-
-        for y in 0..self.grid.tiles.len() {
-            if grid.tiles[y][0].tile_kind == TileKind::Ground {
-                grid.flood_fill(Point2 { x: 0, y: y as i32 }, Cardinal::East, &mut visited);
-            }
-            let end = grid.tiles[y].len() - 1;
-            if grid.tiles[y][end].tile_kind == TileKind::Ground {
-                grid.flood_fill(
-                    Point2 {
-                        x: end as i32,
-                        y: y as i32,
-                    },
-                    Cardinal::West,
-                    &mut visited,
-                );
-            }
-        }
-
-        let mut sum = 0;
-
-        for row in &grid.tiles {
-            for tile in row {
-                if tile.tile_kind == TileKind::Ground {
-                    sum += 1;
+                    TileKind::Ground => {}
+                    _ => {
+                        unreachable!()
+                    }
+                }
+                if within && self.grid.tiles[y][x].tile_kind == TileKind::Ground {
+                    inside.insert((y, x));
                 }
             }
         }
 
-        println!("{}", grid);
-
-        Ok(sum.to_string())
+        Ok(inside.len().to_string())
     }
 }

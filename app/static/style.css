@@ -187,6 +187,7 @@ label {
 
 #lower-right {
     display: flex;
+    flex-direction: row;
 }
 
 #day-container {
@@ -218,4 +219,14 @@ h1 a {
     gap: 10px;
     width: 100%;
     justify-content: space-between;
+}
+
+button {
+    cursor: pointer;
+}
+
+button:disabled {
+    cursor: unset;
+    color: var(--terminal-black);
+    border-style: dotted;
 }

@@ -1,6 +1,5 @@
 use crate::ui::UIRef;
 use gloo_events::EventListener;
-use solutions::input::get;
 use solutions::solvers::Solvers;
 
 pub struct EventProcessor {
@@ -30,10 +29,16 @@ impl EventProcessor {
         };
     }
 
+    fn next_click_handler(ui_ref: &mut UIRef) {
+        ui_ref.next_day();
+    }
+
+    fn previous_click_handler(ui_ref: &mut UIRef) {
+        ui_ref.previous_day();
+    }
+
     fn day_select_handler(ui_ref: &mut UIRef) {
-        ui_ref.clear_outputs();
-        ui_ref.set_input(get(ui_ref.day()));
-        let _result = ui_ref.save_state(&mut gloo_utils::window().location());
+        ui_ref.handle_day_change();
     }
 
     fn solve_handler(ui_ref: &mut UIRef) {
@@ -121,9 +126,28 @@ impl EventProcessor {
             },
         );
 
+        let mut ui_clone = self.ui_ref.clone();
+
+        let _next_listener =
+            EventListener::new(self.ui_ref.next_event_target(), "click", move |_event| {
+                EventProcessor::next_click_handler(&mut ui_clone);
+            });
+
+        let mut ui_clone = self.ui_ref.clone();
+
+        let _previous_listener = EventListener::new(
+            self.ui_ref.previous_event_target(),
+            "click",
+            move |_event| {
+                EventProcessor::previous_click_handler(&mut ui_clone);
+            },
+        );
+
         _part_2_copy_listener.forget();
         _part_1_copy_listener.forget();
         _day_listener.forget();
         _solve_listener.forget();
+        _next_listener.forget();
+        _previous_listener.forget();
     }
 }

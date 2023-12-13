@@ -20,11 +20,7 @@ mod wasm {
 
         let mut ui_ref = UIRef::new(state);
 
-        let day: usize = ui_ref.day();
-
-        let input = solutions::input::get(day);
-
-        ui_ref.set_input(input);
+        ui_ref.handle_day_change();
 
         let mut event_processor = EventProcessor::new(ui_ref);
 

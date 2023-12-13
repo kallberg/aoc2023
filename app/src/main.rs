@@ -1,7 +1,7 @@
-use crate::Parts::{Both, One, Two};
 #[cfg(not(target_arch = "wasm32"))]
 use solutions::*;
 
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Eq, PartialEq)]
 enum Parts {
     One,
@@ -18,7 +18,7 @@ fn print_day(mut day: Box<dyn Solver>, index: usize, parts: Parts) {
     let parse_time = time_start.elapsed();
     println!("day={} parse - {:?}", index, parse_time);
 
-    if parts == Both || parts == One {
+    if parts == Parts::Both || parts == Parts::One {
         let time_start = Instant::now();
         let part_1 = day.part_1().unwrap();
         let part_1_time = time_start.elapsed();
@@ -28,7 +28,7 @@ fn print_day(mut day: Box<dyn Solver>, index: usize, parts: Parts) {
         );
     }
 
-    if parts == Both || parts == Two {
+    if parts == Parts::Both || parts == Parts::Two {
         let time_start = Instant::now();
         let part_2 = day.part_2().unwrap();
         let part_2_time = time_start.elapsed();
@@ -52,7 +52,7 @@ fn main() {
         solver.setup(input::get(day));
     }
 
-    print_day(solver, day, Both);
+    print_day(solver, day, Parts::Both);
 }
 
 #[cfg(target_arch = "wasm32")]

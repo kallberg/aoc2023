@@ -1,109 +1,84 @@
-use crate::day_11::DataKind::EmptySpace;
 use crate::Solver;
 use std::fmt::{Display, Formatter};
 
 #[derive(Copy, Clone, Default, Ord, PartialOrd, Eq, PartialEq)]
 struct Point2D {
-    x: i32,
-    y: i32,
+    x: usize,
+    y: usize,
 }
 
 impl Point2D {
     fn steps(&self, other: &Point2D) -> usize {
-        (self.x.abs_diff(other.x) + self.y.abs_diff(other.y)) as usize
+        self.x.abs_diff(other.x) + self.y.abs_diff(other.y)
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
-pub enum DataKind {
-    EmptySpace,
-    Galaxy(usize),
-}
-
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct GiantImage {
-    data: Vec<Vec<(Point2D, DataKind)>>,
+    width: usize,
+    height: usize,
+    galaxies: Vec<Point2D>,
 }
 
 impl GiantImage {
-    fn expand(&mut self) {
-        let mut galaxy_rows = vec![];
-        let mut galaxy_columns = vec![];
-
-        for (y, row) in self.data.iter_mut().enumerate() {
-            while y >= galaxy_rows.len() {
-                galaxy_rows.push(false);
-            }
-
-            for (x, (position, data)) in row.iter_mut().enumerate() {
-                while x >= galaxy_columns.len() {
-                    galaxy_columns.push(false);
-                }
-
-                if !EmptySpace.eq(data) {
-                    galaxy_rows[y] = true;
-                    galaxy_columns[x] = true;
-                }
+    fn expand(&mut self, amount: usize) {
+        let mut offset = 0;
+        for x in 0..self.width {
+            if !self.column_has_galaxy(x + offset) {
+                self.move_galaxies_by_x(x + offset, amount);
+                offset += amount;
+                self.width += amount;
             }
         }
+        offset = 0;
 
-        for (x, galaxy_column) in galaxy_columns.into_iter().enumerate().rev() {
-            if !galaxy_column {
-                for y in 0..self.data.len() {
-                    self.data[y].insert(x, ((Point2D { x: 0, y: 0 }, EmptySpace)))
-                }
-            }
-        }
-
-        for (y, galaxy_row) in galaxy_rows.into_iter().enumerate().rev() {
-            if !galaxy_row {
-                let mut row = vec![];
-                for _x in 0..self.data[y].len() {
-                    row.push(((Point2D { x: 0, y: 0 }, EmptySpace)))
-                }
-                self.data.insert(y, row);
-            }
-        }
-
-        for (y, row) in self.data.iter_mut().enumerate() {
-            for (x, (position, data)) in row.iter_mut().enumerate() {
-                let y = y as i32;
-                let x = x as i32;
-
-                position.x = x;
-                position.y = y;
+        for y in 0..self.height {
+            if !self.row_has_galaxy(y + offset) {
+                self.move_galaxies_by_y(y + offset, amount);
+                offset += amount;
+                self.height += amount;
             }
         }
     }
 
-    fn galaxy_number_width(&self) -> usize {
-        let max_galaxy_number = self
-            .data
-            .iter()
-            .flatten()
-            .filter_map(|(_, data)| match data {
-                EmptySpace => None,
-                DataKind::Galaxy(number) => Some(*number),
-            })
-            .max()
-            .unwrap_or(0);
-
-        max_galaxy_number.ilog10() as usize + 1
+    fn move_galaxies_by_x(&mut self, x: usize, amount: usize) {
+        for galaxy in self.galaxies.iter_mut() {
+            if galaxy.x >= x {
+                galaxy.x += amount
+            }
+        }
     }
 
-    fn galaxy_positions(&self) -> Vec<Point2D> {
-        self.data
-            .iter()
-            .flatten()
-            .filter_map(|(pos, data)| match data {
-                EmptySpace => None,
-                DataKind::Galaxy(_) => Some(*pos),
-            })
-            .collect()
+    fn move_galaxies_by_y(&mut self, y: usize, amount: usize) {
+        for galaxy in self.galaxies.iter_mut() {
+            if galaxy.y >= y {
+                galaxy.y += amount
+            }
+        }
+    }
+
+    fn column_has_galaxy(&self, column: usize) -> bool {
+        for galaxy in &self.galaxies {
+            if galaxy.x == column {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn row_has_galaxy(&self, row: usize) -> bool {
+        for galaxy in &self.galaxies {
+            if galaxy.y == row {
+                return true;
+            }
+        }
+
+        false
     }
 
     fn galaxy_pairs(&self) -> Vec<(Point2D, Point2D)> {
-        let mut galaxy_positions = self.galaxy_positions();
+        let mut galaxy_positions = self.galaxies.clone();
         let mut pairs = vec![];
 
         while let Some(half) = galaxy_positions.pop() {
@@ -118,21 +93,19 @@ impl GiantImage {
 
 impl Display for GiantImage {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let width = self.galaxy_number_width();
+        let mut galaxy_counter = 1;
 
-        for row in &self.data {
-            for (_, data) in row {
-                write!(
-                    f,
-                    "{:^width$}",
-                    match data {
-                        EmptySpace => ".".to_string(),
-                        DataKind::Galaxy(number) => {
-                            number.to_string()
-                        }
-                    },
-                    width = width
-                )?;
+        for y in 0..self.height {
+            'outer: for x in 0..self.width {
+                for galaxy in &self.galaxies {
+                    if galaxy.x == x && galaxy.y == y {
+                        write!(f, "{}", galaxy_counter)?;
+                        galaxy_counter += 1;
+                        continue 'outer;
+                    }
+                }
+
+                write!(f, ".")?;
             }
             writeln!(f)?;
         }
@@ -153,27 +126,20 @@ impl Solver for Day {
     }
 
     fn parse(&mut self) -> anyhow::Result<()> {
-        let mut galaxy_number = 0;
-
         for (y, line) in self.input.lines().enumerate() {
-            let mut row = vec![];
-
             for (x, character) in line.chars().enumerate() {
-                let x = x as i32;
-                let y = y as i32;
+                if character == '#' {
+                    if x >= self.image.width {
+                        self.image.width = x + 1;
+                    }
+                    if y >= self.image.height {
+                        self.image.height = y + 1;
+                    }
 
-                row.push(if character == '#' {
-                    galaxy_number += 1;
-                    ((Point2D { x, y }, DataKind::Galaxy(galaxy_number)))
-                } else {
-                    ((Point2D { x, y }), DataKind::EmptySpace)
-                })
+                    self.image.galaxies.push(Point2D { x, y });
+                }
             }
-
-            self.image.data.push(row);
         }
-
-        self.image.expand();
 
         Ok(())
     }
@@ -181,7 +147,11 @@ impl Solver for Day {
     fn part_1(&self) -> anyhow::Result<String> {
         let mut total_steps = 0;
 
-        for (left, right) in self.image.galaxy_pairs() {
+        let mut image = self.image.clone();
+
+        image.expand(1);
+
+        for (left, right) in image.galaxy_pairs() {
             let steps = left.steps(&right);
 
             total_steps += steps;
@@ -191,6 +161,18 @@ impl Solver for Day {
     }
 
     fn part_2(&self) -> anyhow::Result<String> {
-        Ok("Placeholder".into())
+        let mut total_steps = 0;
+
+        let mut image = self.image.clone();
+
+        image.expand(999_999);
+
+        for (left, right) in image.galaxy_pairs() {
+            let steps = left.steps(&right);
+
+            total_steps += steps;
+        }
+
+        Ok(total_steps.to_string())
     }
 }

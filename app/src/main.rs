@@ -52,7 +52,7 @@ fn main() {
         solver.setup(input::get(day));
     }
 
-    print_day(solver, day, Parts::One);
+    print_day(solver, day, Parts::Both);
 }
 
 #[cfg(target_arch = "wasm32")]

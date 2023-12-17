@@ -77,17 +77,20 @@ impl GiantImage {
         false
     }
 
-    fn galaxy_pairs(&self) -> Vec<(Point2D, Point2D)> {
-        let mut galaxy_positions = self.galaxies.clone();
-        let mut pairs = vec![];
+    fn distance(&self) -> usize {
+        let mut total_steps = 0;
 
-        while let Some(half) = galaxy_positions.pop() {
-            for other in &galaxy_positions {
-                pairs.push((half, *other))
+        for (index, galaxy) in self.galaxies.iter().enumerate() {
+            for other_index in (index + 1)..self.galaxies.len() {
+                let other = &self.galaxies[other_index];
+
+                if !galaxy.eq(other) {
+                    total_steps += galaxy.steps(other)
+                }
             }
         }
 
-        pairs
+        total_steps
     }
 }
 
@@ -145,34 +148,18 @@ impl Solver for Day {
     }
 
     fn part_1(&self) -> anyhow::Result<String> {
-        let mut total_steps = 0;
-
         let mut image = self.image.clone();
 
         image.expand(1);
 
-        for (left, right) in image.galaxy_pairs() {
-            let steps = left.steps(&right);
-
-            total_steps += steps;
-        }
-
-        Ok(total_steps.to_string())
+        Ok(image.distance().to_string())
     }
 
     fn part_2(&self) -> anyhow::Result<String> {
-        let mut total_steps = 0;
-
         let mut image = self.image.clone();
 
         image.expand(999_999);
 
-        for (left, right) in image.galaxy_pairs() {
-            let steps = left.steps(&right);
-
-            total_steps += steps;
-        }
-
-        Ok(total_steps.to_string())
+        Ok(image.distance().to_string())
     }
 }

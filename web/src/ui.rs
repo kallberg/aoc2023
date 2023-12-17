@@ -8,7 +8,7 @@ use web_sys::{
     HtmlSelectElement, HtmlTextAreaElement, Location,
 };
 
-pub const MAX_DAY: usize = 10;
+pub const MAX_DAY: usize = 11;
 
 #[derive(Clone)]
 pub struct UIRef {

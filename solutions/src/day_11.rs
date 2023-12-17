@@ -3,25 +3,25 @@ use std::fmt::{Display, Formatter};
 
 #[derive(Copy, Clone, Default, Ord, PartialOrd, Eq, PartialEq)]
 struct Point2D {
-    x: usize,
-    y: usize,
+    x: u64,
+    y: u64,
 }
 
 impl Point2D {
-    fn steps(&self, other: &Point2D) -> usize {
+    fn steps(&self, other: &Point2D) -> u64 {
         self.x.abs_diff(other.x) + self.y.abs_diff(other.y)
     }
 }
 
 #[derive(Default, Clone)]
 struct GiantImage {
-    width: usize,
-    height: usize,
+    width: u64,
+    height: u64,
     galaxies: Vec<Point2D>,
 }
 
 impl GiantImage {
-    fn expand(&mut self, amount: usize) {
+    fn expand(&mut self, amount: u64) {
         let mut offset = 0;
         for x in 0..self.width {
             if !self.column_has_galaxy(x + offset) {
@@ -41,7 +41,7 @@ impl GiantImage {
         }
     }
 
-    fn move_galaxies_by_x(&mut self, x: usize, amount: usize) {
+    fn move_galaxies_by_x(&mut self, x: u64, amount: u64) {
         for galaxy in self.galaxies.iter_mut() {
             if galaxy.x >= x {
                 galaxy.x += amount
@@ -49,7 +49,7 @@ impl GiantImage {
         }
     }
 
-    fn move_galaxies_by_y(&mut self, y: usize, amount: usize) {
+    fn move_galaxies_by_y(&mut self, y: u64, amount: u64) {
         for galaxy in self.galaxies.iter_mut() {
             if galaxy.y >= y {
                 galaxy.y += amount
@@ -57,7 +57,7 @@ impl GiantImage {
         }
     }
 
-    fn column_has_galaxy(&self, column: usize) -> bool {
+    fn column_has_galaxy(&self, column: u64) -> bool {
         for galaxy in &self.galaxies {
             if galaxy.x == column {
                 return true;
@@ -67,7 +67,7 @@ impl GiantImage {
         false
     }
 
-    fn row_has_galaxy(&self, row: usize) -> bool {
+    fn row_has_galaxy(&self, row: u64) -> bool {
         for galaxy in &self.galaxies {
             if galaxy.y == row {
                 return true;
@@ -77,7 +77,7 @@ impl GiantImage {
         false
     }
 
-    fn distance(&self) -> usize {
+    fn distance(&self) -> u64 {
         let mut total_steps = 0;
 
         for (index, galaxy) in self.galaxies.iter().enumerate() {
@@ -132,14 +132,17 @@ impl Solver for Day {
         for (y, line) in self.input.lines().enumerate() {
             for (x, character) in line.chars().enumerate() {
                 if character == '#' {
-                    if x >= self.image.width {
-                        self.image.width = x + 1;
+                    if x as u64 >= self.image.width {
+                        self.image.width = x as u64 + 1;
                     }
-                    if y >= self.image.height {
-                        self.image.height = y + 1;
+                    if y as u64 >= self.image.height {
+                        self.image.height = y as u64 + 1;
                     }
 
-                    self.image.galaxies.push(Point2D { x, y });
+                    self.image.galaxies.push(Point2D {
+                        x: x as u64,
+                        y: y as u64,
+                    });
                 }
             }
         }
